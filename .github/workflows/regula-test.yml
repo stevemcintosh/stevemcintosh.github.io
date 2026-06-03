@@ -1,0 +1,26 @@
+name: Regula License Test
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write license file
+        run: echo "${{ secrets.REGULA_LICENSE_B64 }}" | base64 -d > regula.license
+
+      - name: Start Regula container
+        run: |
+          docker run -d --name regula \
+            -v $PWD/regula.license:/app/extBin/unix/regula.license \
+            -p 8080:8080 \
+            regulaforensics/docreader:latest
+
+      - name: Wait for startup
+        run: sleep 30
+
+      - name: Check logs
+        run: docker logs regula | grep -E "license is OK|Licence error|CURL result|licenseName" | head -10
+
+      - name: Check ping
+        run: curl -s http://localhost:8080/api/ping | python3 -m json.tool
